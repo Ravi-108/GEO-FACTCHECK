@@ -11,12 +11,16 @@ import time
 
 # Verified free models on OpenRouter — tried in order until one works
 FALLBACK_MODELS = [
-    "google/gemma-4-31b-it:free",
+    "google/gemini-2.0-pro-exp-02-05:free",
+    "google/gemma-2-9b-it:free",
     "meta-llama/llama-3.3-70b-instruct:free",
+    "meta-llama/llama-3.1-8b-instruct:free",
+    "mistralai/mistral-7b-instruct:free",
+    "qwen/qwen-2.5-72b-instruct:free",
     "nousresearch/hermes-3-llama-3.1-405b:free",
-    "google/gemma-4-26b-a4b-it:free",
-    "qwen/qwen3-coder:free",
-    "nvidia/nemotron-3-super-120b-a12b:free",
+    "microsoft/phi-3-mini-128k-instruct:free",
+    "openchat/openchat-7b:free",
+    "cognitivecomputations/dolphin-mixtral-8x7b:free"
 ]
 
 MAX_RETRIES = 2  # Per model
@@ -99,10 +103,15 @@ Return ONLY valid JSON with no markdown formatting, no code blocks, no additiona
                     break  # Other error, try next model
     
     # All models failed
+    error_msg = str(e)
+    import re
+    match = re.search(r"'message':\s*'([^']+)'", error_msg)
+    clean_msg = match.group(1) if match else error_msg
+    
     return {
         "verdict": "ERROR",
         "confidence": "LOW",
-        "explanation": "All AI models failed to process this claim.",
+        "explanation": f"API Error: {clean_msg}",
         "correct_fact": None,
         "sources": sources[:3]
     }

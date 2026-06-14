@@ -1344,7 +1344,16 @@ with right_col:
                 try:
                     claims = extract_claims(text, OPENROUTER_KEY)
                 except Exception as exc:
-                    status_placeholder.error(f"Claim extraction failed: {str(exc)}")
+                    error_msg = str(exc)
+                    # Try to extract a clean message if the API returned a JSON error dict
+                    import re
+                    match = re.search(r"'message':\s*'([^']+)'", error_msg)
+                    if match:
+                        clean_msg = match.group(1)
+                        status_placeholder.error(f"🚨 **API Error:** {clean_msg}")
+                    else:
+                        status_placeholder.error(f"🚨 **Claim extraction failed:** {error_msg}")
+                    set_stage("Upload", stage_placeholder)
                 else:
                     st.session_state.claim_count = len(claims)
 
