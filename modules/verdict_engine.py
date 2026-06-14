@@ -92,6 +92,20 @@ Return ONLY valid JSON with no markdown formatting, no code blocks, no additiona
             
             except Exception as e:
                 error_str = str(e)
+                
+                # Check for hard account limits (do not retry or fallback)
+                if "free-models-per-day" in error_str or "credits" in error_str.lower():
+                    import re
+                    match = re.search(r"'message':\s*'([^']+)'", error_str)
+                    clean_msg = match.group(1) if match else error_str
+                    return {
+                        "verdict": "ERROR",
+                        "confidence": "LOW",
+                        "explanation": f"API Error: {clean_msg}",
+                        "correct_fact": None,
+                        "sources": sources[:3]
+                    }
+                
                 # If rate limited (429), wait and retry same model
                 if "429" in error_str:
                     time.sleep(5 * (attempt + 1))

@@ -96,6 +96,11 @@ TEXT TO ANALYZE:
             except Exception as e:
                 last_error = e
                 error_str = str(e)
+                
+                # Check for hard account limits (do not retry or fallback)
+                if "free-models-per-day" in error_str or "credits" in error_str.lower():
+                    raise Exception(f"Account limit reached: {error_str}")
+                
                 # If rate limited (429), wait and retry same model
                 if "429" in error_str:
                     time.sleep(5 * (attempt + 1))
