@@ -11,16 +11,9 @@ import time
 
 # Verified free models on OpenRouter — tried in order until one works
 FALLBACK_MODELS = [
-    "google/gemini-2.0-pro-exp-02-05:free",
-    "google/gemma-2-9b-it:free",
     "meta-llama/llama-3.3-70b-instruct:free",
-    "meta-llama/llama-3.1-8b-instruct:free",
-    "mistralai/mistral-7b-instruct:free",
-    "qwen/qwen-2.5-72b-instruct:free",
-    "nousresearch/hermes-3-llama-3.1-405b:free",
-    "microsoft/phi-3-mini-128k-instruct:free",
-    "openchat/openchat-7b:free",
-    "cognitivecomputations/dolphin-mixtral-8x7b:free"
+    "google/gemini-2.0-flash-lite-preview-02-05:free",
+    "mistralai/mistral-7b-instruct:free"
 ]
 
 MAX_RETRIES = 2  # Per model
@@ -72,7 +65,7 @@ Return format:
 TEXT TO ANALYZE:
 {truncated_text}"""
 
-    last_error = None
+    first_error = None
     for model_name in FALLBACK_MODELS:
         for attempt in range(MAX_RETRIES):
             try:
@@ -94,7 +87,8 @@ TEXT TO ANALYZE:
                 return json.loads(raw)
             
             except Exception as e:
-                last_error = e
+                if first_error is None:
+                    first_error = e
                 error_str = str(e)
                 
                 # Check for hard account limits (do not retry or fallback)
@@ -106,10 +100,10 @@ TEXT TO ANALYZE:
                     time.sleep(5 * (attempt + 1))
                     continue
                 # If model not found (404), skip to next model immediately
-                elif "404" in error_str:
+                elif "404" in error_str or "endpoints" in error_str.lower():
                     break
                 else:
                     break  # Other error, try next model
     
     # All models failed
-    raise Exception(f"All models failed. Last error: {last_error}")
+    raise Exception(f"All models failed. Primary error: {first_error}")
