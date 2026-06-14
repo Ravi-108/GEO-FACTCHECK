@@ -1,0 +1,373 @@
+
+<style>
+h2.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
+*{box-sizing:border-box}
+.phase-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px}
+.ptab{font-size:12px;padding:5px 12px;border-radius:20px;border:0.5px solid var(--color-border-secondary);background:transparent;color:var(--color-text-secondary);cursor:pointer;font-family:var(--font-sans);transition:all .15s}
+.ptab.active{background:var(--color-background-secondary);color:var(--color-text-primary);border-color:var(--color-border-primary);font-weight:500}
+.phase-panel{display:none}
+.phase-panel.show{display:block}
+.phase-header{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.ph-num{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:500;flex-shrink:0}
+.ph-title{font-size:15px;font-weight:500;color:var(--color-text-primary);margin:0}
+.ph-sub{font-size:12px;color:var(--color-text-secondary);margin:0}
+.task-section{margin-bottom:14px}
+.ts-label{font-size:11px;font-weight:500;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:0.06em;margin:0 0 8px}
+.task-item{display:flex;align-items:flex-start;gap:9px;padding:7px 0;border-bottom:0.5px solid var(--color-border-tertiary);cursor:pointer}
+.task-item:last-child{border-bottom:none}
+.task-cb{width:16px;height:16px;border:0.5px solid var(--color-border-secondary);border-radius:4px;flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center;font-size:11px;transition:all .15s}
+.task-cb.done{background:var(--color-background-success);border-color:var(--color-border-success);color:var(--color-text-success)}
+.task-text{font-size:13px;color:var(--color-text-primary);line-height:1.5;flex:1}
+.task-text.done{color:var(--color-text-secondary);text-decoration:line-through;text-decoration-color:var(--color-border-secondary)}
+.task-meta{font-size:11px;color:var(--color-text-tertiary);white-space:nowrap;margin-top:1px}
+.code-block{background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);padding:10px 12px;font-family:var(--font-mono);font-size:11px;color:var(--color-text-primary);line-height:1.6;margin:8px 0;overflow-x:auto;white-space:pre}
+.note-box{border-left:2px solid var(--color-border-info);border-radius:0;padding:8px 12px;background:var(--color-background-info);font-size:12px;color:var(--color-text-info);line-height:1.5;margin:10px 0}
+.warn-box{border-left:2px solid var(--color-border-warning);padding:8px 12px;background:var(--color-background-warning);font-size:12px;color:var(--color-text-warning);line-height:1.5;margin:10px 0}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0}
+.mini-card{border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);padding:10px 12px}
+.mini-card h4{font-size:12px;font-weight:500;color:var(--color-text-secondary);margin:0 0 8px;text-transform:uppercase;letter-spacing:0.04em}
+.file-tree{font-family:var(--font-mono);font-size:12px;color:var(--color-text-primary);line-height:1.8;background:var(--color-background-secondary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);padding:12px 14px;margin:10px 0}
+.ft-dir{color:var(--color-text-info);font-weight:500}
+.ft-key{color:var(--color-text-success)}
+.progress-bar{height:4px;background:var(--color-border-tertiary);border-radius:2px;margin:6px 0 14px;overflow:hidden}
+.progress-fill{height:100%;border-radius:2px;background:var(--color-text-success);transition:width .3s}
+.progress-label{font-size:11px;color:var(--color-text-secondary);margin-bottom:4px}
+.chip{display:inline-flex;align-items:center;gap:4px;font-size:11px;padding:2px 8px;border-radius:10px;font-weight:500}
+.chip-purple{background:#EEEDFE;color:#3C3489}
+.chip-teal{background:#E1F5EE;color:#085041}
+.chip-amber{background:#FAEEDA;color:#633806}
+.chip-red{background:#FCEBEB;color:#791F1F}
+</style>
+
+<h2 class="sr-only">Implementation plan for GEO product PPT and Fact-Check web app, broken into five phases with task checklists and technical details.</h2>
+
+<div style="padding:0.5rem 0">
+
+<div class="phase-tabs" id="tabs">
+  <button class="ptab active" onclick="switchPhase(0)"><i class="ti ti-settings" aria-hidden="true"></i> Phase 0 · Setup</button>
+  <button class="ptab" onclick="switchPhase(1)"><i class="ti ti-presentation" aria-hidden="true"></i> Phase 1 · PPT</button>
+  <button class="ptab" onclick="switchPhase(2)"><i class="ti ti-code" aria-hidden="true"></i> Phase 2 · App core</button>
+  <button class="ptab" onclick="switchPhase(3)"><i class="ti ti-cloud-upload" aria-hidden="true"></i> Phase 3 · Deploy</button>
+  <button class="ptab" onclick="switchPhase(4)"><i class="ti ti-send" aria-hidden="true"></i> Phase 4 · Submit</button>
+</div>
+
+<div class="phase-panel show" id="panel-0">
+  <div class="phase-header">
+    <div class="ph-num" style="background:var(--color-background-secondary);color:var(--color-text-secondary)">0</div>
+    <div><p class="ph-title">Environment setup</p><p class="ph-sub">~30 min · Do this first before anything else</p></div>
+  </div>
+  <div class="task-section">
+    <p class="ts-label">Accounts to create</p>
+    <div class="task-item" onclick="toggle(this)"><div class="task-cb"></div><div class="task-text">Sign up at platform.anthropic.com and add billing (min $5 credit)</div><span class="task-meta chip chip-amber">paid</span></div>
+    <div class="task-item" onclick="toggle(this)"><div class="task-cb"></div><div class="task-text">Sign up at tavily.com — get free API key (1000 searches/month)</div><span class="task-meta chip chip-teal">free</span></div>
+    <div class="task-item" onclick="toggle(this)"><div class="task-cb"></div><div class="task-text">Create GitHub account (or use existing) — repo must be public</div><span class="task-meta chip chip-teal">free</span></div>
+    <div class="task-item" onclick="toggle(this)"><div class="task-cb"></div><div class="task-text">Sign up at share.streamlit.io for free cloud deployment</div><span class="task-meta chip chip-teal">free</span></div>
+  </div>
+  <div class="task-section">
+    <p class="ts-label">Local machine setup</p>
+    <div class="task-item" onclick="toggle(this)"><div class="task-cb"></div><div class="task-text">Verify Python 3.9+ is installed: <code>python --version</code></div></div>
+    <div class="task-item" onclick="toggle(this)"><div class="task-cb"></div><div class="task-text">Create project folder and a virtual environment</div></div>
+    <div class="task-item" onclick="toggle(this)"><div class="task-cb"></div><div class="task-text">Install core dependencies</div></div>
+  </div>
+  <div class="code-block">mkdir factcheck-app && cd factcheck-app
+python -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
+pip install streamlit anthropic tavily-python pdfplumber</div>
+  <div class="note-box"><i class="ti ti-info-circle" aria-hidden="true"></i> Save all API keys somewhere safe now. You'll need them in Phase 2 and again on Streamlit Cloud.</div>
+</div>
+
+<div class="phase-panel" id="panel-1">
+  <div class="phase-header">
+    <div class="ph-num" style="background:#EEEDFE;color:#3C3489">1</div>
+    <div><p class="ph-title">Part 1 — GEO product PPT</p><p class="ph-sub">~3 hours · Use AI for research, focus your time on strategy logic</p></div>
+  </div>
+  <div class="task-section">
+    <p class="ts-label">Research (45 min — use Claude or Perplexity)</p>
+    <div class="task-item" onclick="toggle(this)"><div class="task-cb"></div><div class="task-text">Research GEO competitors: Profound, Peec.ai, Evertune, Semrush AI Overviews</div></div>
+    <div class="task-item" onclick="toggle(this)"><div class="task-cb"></div><div class="task-text">Understand how LLMs (ChatGPT, Perplexity, Gemini) surface brand mentions differently</div></div>
+    <div class="task-item" onclick="toggle(this)"><div class="task-cb"></div><div class="task-text">Identify monetization models: SaaS seat-based, usage-based, enterprise tier</div></div>
+  </div>
+  <div class="task-section">
+    <p class="ts-label">Slide structure (build in this order)</p>
+    <div class="task-item" onclick="toggle(this)"><div class="task-cb"></div><div class="task-text">Slide 1 — Problem: brands are invisible in AI search, no existing measurement tool</div><span class="task-meta">5 min</span></div>
+    <div class="task-item" onclick="toggle(this)"><div class="task-cb"></div><div class="task-text">Slide 2 — Current state: AI search landscape (4 LLMs, market share, how each cites brands)</div><span class="task-meta">10 min</span></div>
+    <div class="task-item" onclick="toggle(this)"><div class="task-cb"></div><div class="task-text">Slide 3 — Feature design: deep-dive on 1 specific feature (e.g. "Brand Share of Voice" tracker)</div><span class="task-meta">20 min</span></div>
+    <div class="task-item" onclick="toggle(this)"><div class="task-cb"></div><div class="task-text">Slide 4 — Competitor comparison matrix (Profound, Peec.ai, Brandwatch vs GEO)</div><span class="task-meta">15 min</span></div>
+    <div class="task-item" onclick="toggle(this)"><div class="task-cb"></div><div class="task-text">Slide 5 — 3-month roadmap: foundation, data integrations, first paying customers</div><span class="task-meta">15 min</span></div>
+    <div class="task-item" onclick="toggle(this)"><div class="task-cb"></div><div class="task-text">Slide 6 — 12-month roadmap: enterprise tier, API access, monetization scale</div><span class="task-meta">15 min</span></div>
+    <div class="task-item" onclick="toggle(this)"><div class="task-cb"></div><div class="task-text">Slide 7 — Monetization model: pricing tiers, projected ARR milestones</div><span class="task-meta">15 min</span></div>
+  </div>
+  <div class="note-box"><i class="ti ti-bulb" aria-hidden="true"></i> For slide 3 (feature design), pick one feature and go deep — e.g. "Brand Visibility Score across 5 LLMs with weekly trend + recommended actions." Interviewers want to see product thinking, not a long list.</div>
+  <div class="warn-box"><i class="ti ti-alert-triangle" aria-hidden="true"></i> Export as .pptx before submitting — Google Slides formatting can break when downloaded as PDF.</div>
+</div>
+
+<div class="phase-panel" id="panel-2">
+  <div class="phase-header">
+    <div class="ph-num" style="background:#E1F5EE;color:#085041">2</div>
+    <div><p class="ph-title">Part 2 — Fact-check app (core build)</p><p class="ph-sub">~3 hours · The main technical deliverable</p></div>
+  </div>
+
+  <div class="task-section">
+    <p class="ts-label">Project file structure</p>
+  </div>
+  <div class="file-tree"><span class="ft-dir">factcheck-app/</span>
+├── <span class="ft-key">app.py</span>              ← Streamlit UI (main entry)
+├── <span class="ft-dir">modules/</span>
+│   ├── <span class="ft-key">pdf_extractor.py</span>   ← extract text from PDF
+│   ├── <span class="ft-key">claim_finder.py</span>    ← Claude identifies claims
+│   ├── <span class="ft-key">web_verifier.py</span>    ← Tavily searches web
+│   └── <span class="ft-key">verdict_engine.py</span>  ← Claude gives final verdict
+├── <span class="ft-dir">.streamlit/</span>
+│   └── secrets.toml       ← API keys (never commit!)
+├── requirements.txt
+├── .gitignore
+└── README.md</div>
+
+  <div class="task-section">
+    <p class="ts-label">Step 1 — PDF extractor (20 min)</p>
+    <div class="task-item" onclick="toggle(this)"><div class="task-cb"></div><div class="task-text">Write <code>pdf_extractor.py</code> using pdfplumber to extract text page by page</div></div>
+  </div>
+  <div class="code-block">import pdfplumber
+
+def extract_text(uploaded_file) -> str:
+    text = ""
+    with pdfplumber.open(uploaded_file) as pdf:
+        for page in pdf.pages:
+            text += page.extract_text() or ""
+    return text</div>
+
+  <div class="task-section">
+    <p class="ts-label">Step 2 — Claim finder via Claude (40 min)</p>
+    <div class="task-item" onclick="toggle(this)"><div class="task-cb"></div><div class="task-text">Write <code>claim_finder.py</code> — prompt Claude to return claims as JSON list</div></div>
+  </div>
+  <div class="code-block">import anthropic, json
+
+def extract_claims(text: str) -> list[dict]:
+    client = anthropic.Anthropic()
+    prompt = f"""Extract every verifiable factual claim from the text below.
+Focus on: statistics, percentages, dates, financial figures, technical specs.
+Return ONLY a JSON array. Example:
+[{{"claim": "X grew by 40% in 2023", "type": "statistic"}}]
+
+TEXT:
+{text[:6000]}"""
+    msg = client.messages.create(
+        model="claude-sonnet-4-6",
+        max_tokens=1500,
+        messages=[{"role":"user","content":prompt}]
+    )
+    raw = msg.content[0].text
+    return json.loads(raw)</div>
+
+  <div class="task-section">
+    <p class="ts-label">Step 3 — Web verifier via Tavily (30 min)</p>
+    <div class="task-item" onclick="toggle(this)"><div class="task-cb"></div><div class="task-text">Write <code>web_verifier.py</code> — search each claim, return top snippets</div></div>
+  </div>
+  <div class="code-block">from tavily import TavilyClient
+
+def search_claim(claim: str, api_key: str) -> list[str]:
+    client = TavilyClient(api_key=api_key)
+    results = client.search(
+        query=claim,
+        search_depth="advanced",
+        max_results=4
+    )
+    return [r["content"] for r in results.get("results", [])]</div>
+
+  <div class="task-section">
+    <p class="ts-label">Step 4 — Verdict engine via Claude (40 min)</p>
+    <div class="task-item" onclick="toggle(this)"><div class="task-cb"></div><div class="task-text">Write <code>verdict_engine.py</code> — Claude compares claim to web evidence, outputs verdict + correction</div></div>
+  </div>
+  <div class="code-block">def get_verdict(claim: str, evidence: list[str], client) -> dict:
+    evidence_text = "\n".join(evidence[:3])
+    prompt = f"""You are a fact-checker. Given a claim and web evidence:
+- VERIFIED: claim matches evidence
+- INACCURATE: claim is outdated or partially wrong
+- FALSE: no evidence supports the claim
+
+Claim: "{claim}"
+
+Evidence:
+{evidence_text}
+
+Return ONLY valid JSON:
+{{"verdict":"VERIFIED|INACCURATE|FALSE",
+  "confidence":"HIGH|MEDIUM|LOW",
+  "explanation":"one sentence",
+  "correct_fact":"what the real fact is, or null"}}"""
+    msg = client.messages.create(
+        model="claude-sonnet-4-6",
+        max_tokens=400,
+        messages=[{"role":"user","content":prompt}]
+    )
+    return json.loads(msg.content[0].text)</div>
+
+  <div class="task-section">
+    <p class="ts-label">Step 5 — Streamlit UI / app.py (50 min)</p>
+    <div class="task-item" onclick="toggle(this)"><div class="task-cb"></div><div class="task-text">Build the main UI: PDF upload, progress bar, results table with color-coded verdicts</div></div>
+    <div class="task-item" onclick="toggle(this)"><div class="task-cb"></div><div class="task-text">Read API keys from <code>st.secrets</code> (not from user input — it's a security risk)</div></div>
+    <div class="task-item" onclick="toggle(this)"><div class="task-cb"></div><div class="task-text">Add download button for the report as CSV</div></div>
+  </div>
+  <div class="code-block">import streamlit as st, anthropic, pandas as pd
+from modules.pdf_extractor import extract_text
+from modules.claim_finder import extract_claims
+from modules.web_verifier import search_claim
+from modules.verdict_engine import get_verdict
+
+st.set_page_config(page_title="Fact-Check Agent", page_icon="🔍")
+st.title("Fact-Check Agent")
+uploaded = st.file_uploader("Upload a PDF", type="pdf")
+
+if uploaded and st.button("Run fact-check"):
+    ANTHROPIC_KEY = st.secrets["ANTHROPIC_API_KEY"]
+    TAVILY_KEY    = st.secrets["TAVILY_API_KEY"]
+    client = anthropic.Anthropic(api_key=ANTHROPIC_KEY)
+
+    with st.spinner("Extracting text..."):
+        text = extract_text(uploaded)
+    with st.spinner("Identifying claims..."):
+        claims = extract_claims(text)
+    st.info(f"Found {len(claims)} claims. Verifying...")
+
+    results = []
+    bar = st.progress(0)
+    for i, c in enumerate(claims):
+        evidence = search_claim(c["claim"], TAVILY_KEY)
+        verdict  = get_verdict(c["claim"], evidence, client)
+        results.append({**c, **verdict})
+        bar.progress((i+1)/len(claims))
+
+    df = pd.DataFrame(results)
+    st.dataframe(df, use_container_width=True)
+    st.download_button("Download CSV", df.to_csv(), "report.csv")</div>
+
+  <div class="task-section">
+    <p class="ts-label">Step 6 — Secrets + gitignore (10 min)</p>
+    <div class="task-item" onclick="toggle(this)"><div class="task-cb"></div><div class="task-text">Create <code>.streamlit/secrets.toml</code> with API keys</div></div>
+    <div class="task-item" onclick="toggle(this)"><div class="task-cb"></div><div class="task-text">Add secrets.toml and venv/ to <code>.gitignore</code></div></div>
+  </div>
+  <div class="code-block"># .streamlit/secrets.toml
+ANTHROPIC_API_KEY = "sk-ant-..."
+TAVILY_API_KEY = "tvly-..."
+
+# .gitignore
+.streamlit/secrets.toml
+venv/
+__pycache__/
+*.pyc</div>
+
+  <div class="warn-box"><i class="ti ti-alert-triangle" aria-hidden="true"></i> Never commit secrets.toml to GitHub. Double-check with <code>git status</code> before every push.</div>
+</div>
+
+<div class="phase-panel" id="panel-3">
+  <div class="phase-header">
+    <div class="ph-num" style="background:#FAEEDA;color:#633806">3</div>
+    <div><p class="ph-title">Deploy to Streamlit Cloud</p><p class="ph-sub">~1 hour · Mandatory — local-only gets rejected</p></div>
+  </div>
+  <div class="task-section">
+    <p class="ts-label">GitHub push</p>
+    <div class="task-item" onclick="toggle(this)"><div class="task-cb"></div><div class="task-text">Create a new public GitHub repo named <code>factcheck-agent</code></div></div>
+    <div class="task-item" onclick="toggle(this)"><div class="task-cb"></div><div class="task-text">Push your code (secrets.toml must be in .gitignore — verify before pushing)</div></div>
+    <div class="task-item" onclick="toggle(this)"><div class="task-cb"></div><div class="task-text">Confirm repo is public and readable without login</div></div>
+  </div>
+  <div class="code-block">git init
+git add .
+git commit -m "initial commit"
+git remote add origin https://github.com/YOUR_USER/factcheck-agent.git
+git push -u origin main</div>
+
+  <div class="task-section">
+    <p class="ts-label">Streamlit Cloud deploy</p>
+    <div class="task-item" onclick="toggle(this)"><div class="task-cb"></div><div class="task-text">Go to share.streamlit.io → New app → connect your GitHub repo</div></div>
+    <div class="task-item" onclick="toggle(this)"><div class="task-cb"></div><div class="task-text">Set main file path to <code>app.py</code></div></div>
+    <div class="task-item" onclick="toggle(this)"><div class="task-cb"></div><div class="task-text">Add secrets via Advanced settings → Secrets (paste the contents of secrets.toml)</div></div>
+    <div class="task-item" onclick="toggle(this)"><div class="task-cb"></div><div class="task-text">Click Deploy — wait 3–5 min for first build</div></div>
+    <div class="task-item" onclick="toggle(this)"><div class="task-cb"></div><div class="task-text">Copy the live URL (e.g. <code>https://yourapp.streamlit.app</code>)</div></div>
+  </div>
+  <div class="task-section">
+    <p class="ts-label">Test with a "trap document"</p>
+    <div class="task-item" onclick="toggle(this)"><div class="task-cb"></div><div class="task-text">Create a test PDF with 2–3 intentionally wrong stats and upload it to the live app</div></div>
+    <div class="task-item" onclick="toggle(this)"><div class="task-cb"></div><div class="task-text">Confirm the app flags those stats as INACCURATE or FALSE with correct evidence</div></div>
+    <div class="task-item" onclick="toggle(this)"><div class="task-cb"></div><div class="task-text">Record what the app actually produces — use this for your demo video</div></div>
+  </div>
+  <div class="note-box"><i class="ti ti-info-circle" aria-hidden="true"></i> If Streamlit Cloud fails to build, check the logs. 90% of failures are missing packages in <code>requirements.txt</code> or module import errors.</div>
+  <div class="code-block"># requirements.txt (must be exact — no version conflicts)
+streamlit>=1.35.0
+anthropic>=0.28.0
+tavily-python>=0.3.0
+pdfplumber>=0.10.0
+pandas>=2.0.0</div>
+</div>
+
+<div class="phase-panel" id="panel-4">
+  <div class="phase-header">
+    <div class="ph-num" style="background:#FCEBEB;color:#791F1F">4</div>
+    <div><p class="ph-title">Submission package</p><p class="ph-sub">~30 min · Don't skip the README — they check it</p></div>
+  </div>
+  <div class="task-section">
+    <p class="ts-label">README.md sections (copy this structure)</p>
+    <div class="task-item" onclick="toggle(this)"><div class="task-cb"></div><div class="task-text">Section 1: One-line description + live app link</div></div>
+    <div class="task-item" onclick="toggle(this)"><div class="task-cb"></div><div class="task-text">Section 2: How it works (the 4-step pipeline in plain English)</div></div>
+    <div class="task-item" onclick="toggle(this)"><div class="task-cb"></div><div class="task-text">Section 3: Tech stack table (Streamlit, Claude API, Tavily, pdfplumber)</div></div>
+    <div class="task-item" onclick="toggle(this)"><div class="task-cb"></div><div class="task-text">Section 4: Local setup instructions (clone → add keys → pip install → streamlit run)</div></div>
+    <div class="task-item" onclick="toggle(this)"><div class="task-cb"></div><div class="task-text">Section 5: Output format explanation (Verified/Inaccurate/False + confidence + correction)</div></div>
+  </div>
+  <div class="task-section">
+    <p class="ts-label">Demo video (30 seconds)</p>
+    <div class="task-item" onclick="toggle(this)"><div class="task-cb"></div><div class="task-text">Record screen (Loom free, OBS, or QuickTime on Mac)</div></div>
+    <div class="task-item" onclick="toggle(this)"><div class="task-cb"></div><div class="task-text">Show: upload PDF → results generating → highlight a flagged FALSE claim</div></div>
+    <div class="task-item" onclick="toggle(this)"><div class="task-cb"></div><div class="task-text">Upload to YouTube/Loom (unlisted is fine) — do NOT attach raw video file</div></div>
+  </div>
+  <div class="task-section">
+    <p class="ts-label">Final submission checklist</p>
+    <div class="task-item" onclick="toggle(this)"><div class="task-cb"></div><div class="task-text">Deployed app URL is live and accessible without login</div></div>
+    <div class="task-item" onclick="toggle(this)"><div class="task-cb"></div><div class="task-text">GitHub repo is public with clean commit history</div></div>
+    <div class="task-item" onclick="toggle(this)"><div class="task-cb"></div><div class="task-text">PPT file exported and named clearly (e.g. GEO_Product_Strategy.pptx)</div></div>
+    <div class="task-item" onclick="toggle(this)"><div class="task-cb"></div><div class="task-text">Demo video link is shareable</div></div>
+    <div class="task-item" onclick="toggle(this)"><div class="task-cb"></div><div class="task-text">No API keys visible anywhere in the GitHub repo</div></div>
+  </div>
+  <div class="note-box"><i class="ti ti-check" aria-hidden="true"></i> Send the submission as a single document or email with all four links: app URL, GitHub, PPT, demo video.</div>
+</div>
+
+<div style="margin-top:16px;border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);padding:12px 14px">
+  <p class="progress-label">Overall progress · <span id="done-count">0</span> of <span id="total-count">0</span> tasks done</p>
+  <div class="progress-bar"><div class="progress-fill" id="prog-fill" style="width:0%"></div></div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+    <span class="chip chip-teal"><i class="ti ti-check" aria-hidden="true"></i> Verified = matches evidence</span>
+    <span class="chip chip-amber"><i class="ti ti-alert-triangle" aria-hidden="true"></i> Inaccurate = outdated stat</span>
+    <span class="chip chip-red"><i class="ti ti-x" aria-hidden="true"></i> False = no evidence found</span>
+  </div>
+</div>
+
+</div>
+
+<script>
+const panels = document.querySelectorAll('.phase-panel');
+const tabs = document.querySelectorAll('.ptab');
+
+function switchPhase(n) {
+  panels.forEach((p,i) => p.classList.toggle('show', i === n));
+  tabs.forEach((t,i) => t.classList.toggle('active', i === n));
+}
+
+function toggle(el) {
+  const cb = el.querySelector('.task-cb');
+  const txt = el.querySelector('.task-text');
+  const done = cb.classList.toggle('done');
+  txt.classList.toggle('done', done);
+  if (done) cb.innerHTML = '<i class="ti ti-check" aria-hidden="true"></i>';
+  else cb.innerHTML = '';
+  updateProgress();
+}
+
+function updateProgress() {
+  const all = document.querySelectorAll('.task-item');
+  const done = document.querySelectorAll('.task-cb.done');
+  const pct = all.length ? Math.round(done.length / all.length * 100) : 0;
+  document.getElementById('done-count').textContent = done.length;
+  document.getElementById('total-count').textContent = all.length;
+  document.getElementById('prog-fill').style.width = pct + '%';
+}
+
+updateProgress();
+</script>
