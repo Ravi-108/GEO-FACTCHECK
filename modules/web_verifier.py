@@ -23,7 +23,7 @@ def search_claim(claim: str, api_key: str) -> list[dict]:
         results = client.search(
             query=f"verify fact: {claim}",
             search_depth="advanced",
-            max_results=5
+            max_results=5,
         )
         
         evidence = []

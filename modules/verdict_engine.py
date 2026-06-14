@@ -66,6 +66,7 @@ Return ONLY valid JSON with no markdown formatting, no code blocks, no additiona
     for model_name in FALLBACK_MODELS:
         for attempt in range(MAX_RETRIES):
             try:
+                print(f"Verdict Engine: Trying model {model_name} (Attempt {attempt+1})")
                 response = client.chat.completions.create(
                     model=model_name,
                     messages=[{"role": "user", "content": prompt}],

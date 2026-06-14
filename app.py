@@ -836,6 +836,7 @@ if uploaded and run_check:
     client = OpenAI(
         base_url="https://openrouter.ai/api/v1",
         api_key=OPENROUTER_KEY,
+        timeout=15.0,
     )
 
     st.markdown('<div class="custom-divider"></div>', unsafe_allow_html=True)
@@ -856,6 +857,8 @@ if uploaded and run_check:
             claims = extract_claims(text, OPENROUTER_KEY)
         except Exception as exc:
             st.error(f"Error extracting claims: {str(exc)}")
+            st.toast("Request timed out or failed!", icon="🚨")
+            status.update(label="Process failed.", state="error")
             st.stop()
 
         st.write(f"Found **{len(claims)} verifiable claims**.")
@@ -880,6 +883,9 @@ if uploaded and run_check:
             
             evidence = search_claim(claim_text, TAVILY_KEY)
             verdict = get_verdict(claim_text, evidence, client)
+            
+            if verdict.get("verdict") == "ERROR":
+                st.toast(f"Claim {index + 1} timed out or failed.", icon="⚠️")
 
             results.append(
                 {
@@ -894,6 +900,10 @@ if uploaded and run_check:
 
         progress_text.empty()
         status.update(label="Fact-check complete.", state="complete", expanded=False)
+
+    # Alert the user that processing is complete
+    st.toast("Fact-check complete! Your report is ready.", icon="✅")
+    st.balloons()
 
     verified_count = sum(1 for result in results if result.get("verdict") == "VERIFIED")
     inaccurate_count = sum(1 for result in results if result.get("verdict") == "INACCURATE")

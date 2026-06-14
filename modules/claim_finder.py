@@ -72,6 +72,7 @@ TEXT TO ANALYZE:
     for model_name in FALLBACK_MODELS:
         for attempt in range(MAX_RETRIES):
             try:
+                print(f"Trying model: {model_name} (Attempt {attempt+1})")
                 response = client.chat.completions.create(
                     model=model_name,
                     messages=[{"role": "user", "content": prompt}],

@@ -18,9 +18,15 @@ def extract_text(uploaded_file) -> str:
         Concatenated text from all pages of the PDF.
     """
     text = ""
-    with pdfplumber.open(uploaded_file) as pdf:
-        for page in pdf.pages:
-            page_text = page.extract_text()
-            if page_text:
-                text += page_text + "\n\n"
+    try:
+        # Wrap the bytes in a standard BytesIO to avoid Streamlit UploadedFile quirks
+        pdf_bytes = io.BytesIO(uploaded_file.getvalue())
+        with pdfplumber.open(pdf_bytes) as pdf:
+            for page in pdf.pages:
+                page_text = page.extract_text()
+                if page_text:
+                    text += page_text + "\n\n"
+    except Exception as e:
+        raise Exception(f"Failed to parse PDF file: {str(e)}")
+        
     return text.strip()
