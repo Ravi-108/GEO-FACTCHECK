@@ -1,4 +1,4 @@
-# 🔍 Fact-Check Agent
+# Fact-Check Agent
 
 > AI-powered claim verification engine that reads PDF documents, extracts factual claims, and cross-references them against live web data.
 
