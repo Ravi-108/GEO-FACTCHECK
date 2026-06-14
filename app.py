@@ -18,6 +18,7 @@ from modules.pdf_extractor import extract_text
 from modules.verdict_engine import get_verdict
 from modules.web_verifier import search_claim
 
+APP_VERSION = "0.0.1"
 
 def html_block(markup: str) -> str:
     return "\n".join(line.strip() for line in dedent(markup).strip().splitlines())
@@ -1484,3 +1485,13 @@ with right_col:
             """),
             unsafe_allow_html=True,
         )
+
+# Add version indicator
+st.markdown(
+    f"""
+    <div style="position: fixed; bottom: 10px; left: 10px; font-size: 0.75rem; color: #98a2b3; z-index: 9999; font-weight: 600;">
+        v{APP_VERSION}
+    </div>
+    """,
+    unsafe_allow_html=True
+)
