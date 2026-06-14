@@ -17,9 +17,9 @@ The Fact-Check Agent uses a 4-step AI pipeline to verify claims:
 | Step | What Happens |
 |------|-------------|
 | **1. Extract** | PDF text is parsed using `pdfplumber` to pull all readable content |
-| **2. Identify** | Claude AI scans the text and extracts verifiable factual claims (stats, dates, financials) |
+| **2. Identify** | Advanced OpenRouter LLMs scan the text and extract verifiable factual claims (stats, dates, financials) |
 | **3. Verify** | Each claim is searched against live web data via Tavily's advanced search API |
-| **4. Judge** | Claude compares the claim against web evidence and delivers a verdict with confidence level |
+| **4. Judge** | The AI compares the claim against web evidence and delivers a verdict with confidence level |
 
 ---
 
@@ -44,7 +44,7 @@ Each verdict includes:
 | Technology | Purpose |
 |-----------|---------|
 | [Streamlit](https://streamlit.io) | Web interface & deployment |
-| [Claude API](https://anthropic.com) (Anthropic) | Claim extraction & verdict generation |
+| [OpenRouter API](https://openrouter.ai/) | Claim extraction & verdict generation (using robust model fallback chains) |
 | [Tavily](https://tavily.com) | Real-time web search for evidence |
 | [pdfplumber](https://github.com/jsvine/pdfplumber) | PDF text extraction |
 | [Pandas](https://pandas.pydata.org) | Data handling & CSV export |
@@ -55,7 +55,7 @@ Each verdict includes:
 
 ### Prerequisites
 - Python 3.9+
-- [Anthropic API key](https://console.anthropic.com/) (paid, min $5 credit)
+- [OpenRouter API key](https://openrouter.ai/) (for free or paid AI models)
 - [Tavily API key](https://tavily.com) (free tier: 1000 searches/month)
 
 ### Installation
@@ -82,7 +82,7 @@ cp .streamlit/secrets.toml.example .streamlit/secrets.toml
 Create `.streamlit/secrets.toml`:
 
 ```toml
-ANTHROPIC_API_KEY = "sk-ant-your-key-here"
+OPENROUTER_API_KEY = "sk-or-v1-your-key-here"
 TAVILY_API_KEY = "tvly-your-key-here"
 ```
 
@@ -118,9 +118,9 @@ factcheck-agent/
 ├── app.py                    # Streamlit UI (main entry point)
 ├── modules/
 │   ├── pdf_extractor.py      # PDF text extraction
-│   ├── claim_finder.py       # Claude-powered claim identification
+│   ├── claim_finder.py       # AI-powered claim identification
 │   ├── web_verifier.py       # Tavily web search
-│   └── verdict_engine.py     # Claude-powered verdict generation
+│   └── verdict_engine.py     # AI-powered verdict generation
 ├── .streamlit/
 │   └── secrets.toml          # API keys (not committed)
 ├── requirements.txt
