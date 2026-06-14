@@ -35,6 +35,10 @@ def extract_claims(text: str, api_key: str) -> list[dict]:
         base_url="https://openrouter.ai/api/v1",
         api_key=api_key,
         timeout=15.0,
+        default_headers={
+            "HTTP-Referer": "https://github.com/Ravi-108/GEO-FACTCHECK",
+            "X-Title": "GEO Fact-Check Agent",
+        }
     )
     
     # Truncate to avoid token limits while keeping enough context

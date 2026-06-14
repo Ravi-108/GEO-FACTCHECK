@@ -1317,6 +1317,10 @@ with right_col:
                 base_url="https://openrouter.ai/api/v1",
                 api_key=OPENROUTER_KEY,
                 timeout=15.0,
+                default_headers={
+                    "HTTP-Referer": "https://github.com/Ravi-108/GEO-FACTCHECK",
+                    "X-Title": "GEO Fact-Check Agent",
+                }
             )
 
             st.session_state.results = []
