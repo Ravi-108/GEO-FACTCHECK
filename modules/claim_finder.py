@@ -37,6 +37,7 @@ def extract_claims(text: str, api_key: str) -> list[dict]:
     client = OpenAI(
         base_url="https://openrouter.ai/api/v1",
         api_key=api_key,
+        timeout=15.0,
     )
     
     # Truncate to avoid token limits while keeping enough context
