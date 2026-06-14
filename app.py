@@ -203,12 +203,113 @@ def render_correction(correct_fact) -> str:
     """)
 
 
+
+STAGE_LABELS = ["Upload", "Extracting", "Finding claims", "Checking evidence", "Report ready"]
+
+
+def init_session_state() -> None:
+    defaults = {
+        "upload_key": 0,
+        "stage": "Upload",
+        "results": [],
+        "word_count": 0,
+        "claim_count": 0,
+        "active_file_name": None,
+        "active_file_size": 0,
+    }
+    for key, value in defaults.items():
+        if key not in st.session_state:
+            st.session_state[key] = value
+
+
+def reset_upload_state() -> None:
+    st.session_state.upload_key += 1
+    st.session_state.stage = "Upload"
+    st.session_state.results = []
+    st.session_state.word_count = 0
+    st.session_state.claim_count = 0
+    st.session_state.active_file_name = None
+    st.session_state.active_file_size = 0
+
+
+def set_stage(stage: str, placeholder=None) -> None:
+    st.session_state.stage = stage
+    if placeholder is not None:
+        placeholder.markdown(render_stage_bar(stage), unsafe_allow_html=True)
+
+
+def render_stage_bar(current_stage: str) -> str:
+    try:
+        current_index = STAGE_LABELS.index(current_stage)
+    except ValueError:
+        current_index = 0
+
+    items = []
+    for index, label in enumerate(STAGE_LABELS):
+        if index < current_index:
+            state_class = "is-done"
+        elif index == current_index:
+            state_class = "is-current"
+        else:
+            state_class = "is-next"
+
+        items.append(
+            html_block(f"""
+            <div class="stage-item {state_class}">
+                <span class="stage-dot">{index + 1}</span>
+                <span>{label}</span>
+            </div>
+            """)
+        )
+
+    return html_block(f"""
+    <div class="stage-shell">
+        <div class="stage-label">Current stage</div>
+        <div class="stage-row">{''.join(items)}</div>
+    </div>
+    """)
+
+
+def render_stats(results: list[dict]) -> str:
+    verified_count = sum(1 for result in results if result.get("verdict") == "VERIFIED")
+    inaccurate_count = sum(1 for result in results if result.get("verdict") == "INACCURATE")
+    false_count = sum(1 for result in results if result.get("verdict") == "FALSE")
+    error_count = sum(1 for result in results if result.get("verdict") == "ERROR")
+
+    return html_block(f"""
+    <div class="stats-container">
+        <div class="stat-card stat-total">
+            <div class="stat-number">{len(results)}</div>
+            <div class="stat-label">Claims</div>
+        </div>
+        <div class="stat-card stat-verified">
+            <div class="stat-number">{verified_count}</div>
+            <div class="stat-label">Verified</div>
+        </div>
+        <div class="stat-card stat-inaccurate">
+            <div class="stat-number">{inaccurate_count}</div>
+            <div class="stat-label">Inaccurate</div>
+        </div>
+        <div class="stat-card stat-false">
+            <div class="stat-number">{false_count}</div>
+            <div class="stat-label">False</div>
+        </div>
+        <div class="stat-card stat-error">
+            <div class="stat-number">{error_count}</div>
+            <div class="stat-label">Errors</div>
+        </div>
+    </div>
+    """)
+
+
 st.set_page_config(
     page_title="Fact-Check Agent | AI-Powered Claim Verification",
-    page_icon="🔍",
+    page_icon="FC",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
+
+init_session_state()
 
 st.markdown(
     html_block("""
@@ -233,22 +334,18 @@ st.markdown(
     }
 
     .stApp {
-        background:
-            linear-gradient(180deg, #fbfaf8 0%, #f6f9f8 48%, #ffffff 100%);
+        background: linear-gradient(180deg, #fbfaf8 0%, #f6f9f8 48%, #ffffff 100%);
         color: var(--ink);
         font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
 
-    .block-container {
-        max-width: 1120px;
-        padding-top: 2.25rem;
-        padding-bottom: 2.25rem;
-    }
-
     #MainMenu,
+    header,
     footer,
-    .stDeployButton {
+    .stDeployButton,
+    div[data-testid="stToolbar"] {
         visibility: hidden;
+        height: 0;
     }
 
     .hero-container {
@@ -281,6 +378,7 @@ st.markdown(
         margin: 0;
         color: var(--ink);
         font-size: 3rem;
+
         line-height: 1.08;
         font-weight: 800;
         letter-spacing: 0;
@@ -770,241 +868,606 @@ st.markdown(
             margin-left: 0;
         }
     }
-</style>
+
+    .block-container {
+        max-width: 1320px;
+        padding-top: 4.5rem;
+        padding-bottom: 1rem;
+    }
+
+    .app-kicker,
+    .stage-label,
+    .panel-label {
+        color: var(--primary-dark);
+        font-size: 0.72rem;
+        font-weight: 800;
+        letter-spacing: 0;
+        text-transform: uppercase;
+    }
+
+    .control-title {
+        margin: 0.3rem 0 0;
+        color: var(--ink);
+        font-size: 2.25rem;
+        line-height: 1.02;
+        font-weight: 850;
+        letter-spacing: 0;
+    }
+
+    .control-title span {
+        color: var(--primary);
+    }
+
+    .control-copy {
+        margin: 0.75rem 0 1.15rem;
+        color: var(--muted);
+        font-size: 0.95rem;
+        line-height: 1.55;
+    }
+
+    .control-panel,
+    .result-panel,
+    .empty-panel {
+        border: 1px solid rgba(23, 59, 63, 0.11);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.88);
+        box-shadow: 0 14px 32px rgba(23, 32, 42, 0.06);
+    }
+
+    .control-panel {
+        padding: 1.2rem;
+        margin-bottom: 1rem;
+    }
+
+    .result-panel,
+    .empty-panel {
+        padding: 1rem;
+        margin-top: 0.85rem;
+    }
+
+    .empty-panel {
+        min-height: 220px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        color: var(--muted);
+    }
+
+    .empty-title {
+        margin: 0 0 0.35rem;
+        color: var(--ink);
+        font-size: 1.15rem;
+        font-weight: 800;
+    }
+
+    .empty-copy {
+        margin: 0;
+        font-size: 0.92rem;
+        line-height: 1.55;
+    }
+
+    .file-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 0;
+    }
+
+    .file-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 34px;
+        height: 34px;
+        border-radius: 8px;
+        background: rgba(21, 115, 71, 0.11);
+        flex: 0 0 auto;
+    }
+
+    .meta-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+        margin-top: 1rem;
+    }
+
+    .mini-stat {
+        padding: 0.75rem;
+        border: 1px solid rgba(23, 59, 63, 0.1);
+        border-radius: 8px;
+        background: rgba(247, 250, 249, 0.72);
+    }
+
+    .mini-stat strong {
+        display: block;
+        color: var(--ink);
+        font-size: 1.1rem;
+        line-height: 1;
+    }
+
+    .mini-stat span {
+        display: block;
+        margin-top: 5px;
+        color: var(--muted);
+        font-size: 0.74rem;
+        font-weight: 750;
+        text-transform: uppercase;
+    }
+
+    .stage-shell {
+        position: sticky;
+        top: 0.75rem;
+        z-index: 6;
+        padding: 0.9rem 1rem;
+        border: 1px solid rgba(23, 59, 63, 0.12);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.94);
+        backdrop-filter: blur(12px);
+        box-shadow: 0 14px 30px rgba(23, 32, 42, 0.07);
+    }
+
+    .stage-row {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 8px;
+        margin-top: 0.75rem;
+    }
+
+    .stage-item {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        min-width: 0;
+        padding: 8px;
+        border: 1px solid rgba(23, 59, 63, 0.1);
+        border-radius: 8px;
+        color: var(--muted);
+        background: var(--surface-alt);
+        font-size: 0.78rem;
+        font-weight: 800;
+        line-height: 1.15;
+    }
+
+    .stage-dot {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 22px;
+        height: 22px;
+        border-radius: 999px;
+        background: #ffffff;
+        color: inherit;
+        font-size: 0.72rem;
+        flex: 0 0 auto;
+    }
+
+    .stage-item.is-current {
+        color: #ffffff;
+        border-color: var(--primary);
+        background: linear-gradient(135deg, var(--primary), var(--teal));
+    }
+
+    .stage-item.is-done {
+        color: var(--green);
+        border-color: rgba(21, 115, 71, 0.16);
+        background: rgba(240, 253, 244, 0.9);
+    }
+
+    .run-status {
+        margin-top: 0.8rem;
+        padding: 0.8rem 0.95rem;
+        border: 1px solid rgba(23, 59, 63, 0.1);
+        border-radius: 8px;
+        background: rgba(247, 250, 249, 0.78);
+        color: var(--teal);
+        font-size: 0.9rem;
+        font-weight: 750;
+    }
+
+    div[data-testid="stHorizontalBlock"]:has(.control-title) > div:first-child > div {
+        position: sticky;
+        top: 1.25rem;
+        align-self: flex-start;
+    }
+
+    div[data-testid="stHorizontalBlock"]:has(.control-title) > div:nth-child(2) > div {
+        max-height: calc(100vh - 2.5rem);
+        overflow-y: auto;
+        padding-right: 0.25rem;
+    }
+
+    div[data-testid="stFileUploader"] {
+        margin: 0.9rem 0 0.85rem;
+        max-width: none;
+    }
+
+    div[data-testid="stFileUploader"] [data-testid="stFileUploaderDropzone"] {
+        min-height: 150px;
+        padding: 20px;
+    }
+
+    div[data-testid="stFileUploader"] [data-testid="stFileUploaderDropzone"]::before {
+        width: 56px;
+        height: 56px;
+        margin-bottom: 8px;
+    }
+
+    div[data-testid="stFileUploader"] [data-testid="stFileUploaderDropzone"]::after {
+        content: "Drop PDF here";
+        font-size: 0.92rem;
+    }
+
+    .uploaded-file {
+        margin-bottom: 0;
+        background: rgba(240, 253, 244, 0.9);
+        height: 54px;
+    }
+
+    /* Style the remove button column */
+    div[data-testid="stHorizontalBlock"] > div:nth-child(2) button {
+        min-height: 54px;
+        padding: 0;
+        font-size: 1.6rem;
+        line-height: 1;
+        background: #ffffff;
+        color: var(--slate);
+        border: 1px solid rgba(23, 59, 63, 0.18);
+        border-radius: 8px;
+    }
+
+    div[data-testid="stHorizontalBlock"] > div:nth-child(2) button:hover {
+        background: rgba(254, 243, 242, 0.95);
+        color: var(--red);
+        border-color: rgba(180, 35, 24, 0.3);
+    }
+
+    .stButton > button[kind="secondary"] {
+        min-height: 44px;
+        background: #ffffff;
+        color: var(--red);
+        border: 1px solid rgba(180, 35, 24, 0.18);
+        box-shadow: none;
+    }
+
+    .stButton > button[kind="secondary"]:hover {
+        background: rgba(254, 243, 242, 0.95);
+        color: var(--red);
+        box-shadow: none;
+    }
+
+    .action-row {
+        margin-top: 1.25rem;
+    }
+
+    .stats-container {
+        grid-template-columns: repeat(5, minmax(86px, 1fr));
+        gap: 10px;
+        margin: 0.5rem 0 1rem;
+    }
+
+    .stat-card {
+        min-height: 82px;
+        padding: 12px;
+    }
+
+    .stat-number {
+        font-size: 1.55rem;
+    }
+
+    .section-heading {
+        font-size: 1.1rem;
+        margin-bottom: 0.6rem;
+    }
+
+    .verdict-card {
+        padding: 14px;
+        margin-bottom: 10px;
+    }
+
+    .claim-text {
+        font-size: 0.93rem;
+        line-height: 1.45;
+    }
+
+    .explanation-text {
+        font-size: 0.86rem;
+        line-height: 1.5;
+    }
+
+    .footer-note {
+        display: none;
+    }
+
+    @media (max-width: 920px) {
+        div[data-testid="stHorizontalBlock"]:has(.control-title) > div:first-child > div,
+        .stage-shell {
+            position: static;
+        }
+
+        div[data-testid="stHorizontalBlock"]:has(.control-title) > div:nth-child(2) > div {
+            max-height: none;
+            overflow: visible;
+            padding-right: 0;
+        }
+
+        .stage-row {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+
+    @media (max-width: 640px) {
+        .control-title {
+            font-size: 1.9rem;
+        }
+
+        .stage-row,
+        .stats-container,
+        .meta-grid {
+            grid-template-columns: 1fr;
+        }
+    }</style>
 """),
     unsafe_allow_html=True,
 )
 
 st.markdown(
     html_block(f"""
-<div class="hero-container">
-    <div class="hero-badge">
-        {SVG_HERO}
-        AI-powered verification engine
+    <div class="control-panel">
+        <div class="app-kicker">{SVG_HERO} AI verification</div>
+        <h1 class="control-title">Fact-Check <span>Agent</span></h1>
+        <p class="control-copy">Upload one PDF, run verification, and review evidence-backed verdicts without leaving the workspace.</p>
     </div>
-    <h1 class="hero-title">Fact-Check <span>Agent</span></h1>
-    <p class="hero-subtitle">
-        Upload a PDF, extract verifiable claims, search live evidence, and turn the results
-        into a clear verdict report with confidence and source links.
-    </p>
-</div>
-"""),
+    """),
     unsafe_allow_html=True,
 )
 
-st.markdown(render_process_visual(), unsafe_allow_html=True)
+left_col, right_col = st.columns([0.35, 0.65], gap="large")
 
-col1, col2, col3 = st.columns([1, 2, 1])
+with left_col:
+    st.markdown('<div class="panel-label">Document</div>', unsafe_allow_html=True)
 
-with col2:
     uploaded = st.file_uploader(
-        "Drop your PDF here",
+        "Upload PDF",
         type="pdf",
         help="Upload a PDF document containing claims you want to verify.",
         label_visibility="collapsed",
+        key=f"pdf_upload_{st.session_state.upload_key}",
     )
 
     if uploaded:
+        is_new_file = (
+            st.session_state.active_file_name != uploaded.name
+            or st.session_state.active_file_size != uploaded.size
+        )
+        if is_new_file:
+            st.session_state.active_file_name = uploaded.name
+            st.session_state.active_file_size = uploaded.size
+            st.session_state.stage = "Upload"
+            st.session_state.results = []
+            st.session_state.word_count = 0
+            st.session_state.claim_count = 0
+
         uploaded_name = escape(uploaded.name)
         uploaded_size = round(uploaded.size / 1024, 1)
-        st.markdown(
-            html_block(f"""
-            <div class="uploaded-file">
-                {SVG_CHECK}
-                <span class="uploaded-filename">{uploaded_name}</span>
-                <span class="uploaded-size">{uploaded_size} KB</span>
-            </div>
-            """),
-            unsafe_allow_html=True,
-        )
-        run_check = st.button("Run fact-check", type="primary", use_container_width=True)
-    else:
-        run_check = False
+        file_info_col, remove_col = st.columns([0.82, 0.18], gap="small")
 
-if uploaded and run_check:
-    try:
-        OPENROUTER_KEY = st.secrets["OPENROUTER_API_KEY"]
-        TAVILY_KEY = st.secrets["TAVILY_API_KEY"]
-    except Exception:
-        st.error("API keys not found. Configure them in `.streamlit/secrets.toml` or Streamlit Cloud secrets.")
-        st.code(
-            '# .streamlit/secrets.toml\nOPENROUTER_API_KEY = "sk-or-..."\nTAVILY_API_KEY = "tvly-..."',
-            language="toml",
-        )
-        st.stop()
-
-    client = OpenAI(
-        base_url="https://openrouter.ai/api/v1",
-        api_key=OPENROUTER_KEY,
-        timeout=15.0,
-    )
-
-    st.markdown('<div class="custom-divider"></div>', unsafe_allow_html=True)
-
-    with st.status("Processing your document...", expanded=True) as status:
-        st.write("**Step 1/4** - Extracting text from PDF...")
-        text = extract_text(uploaded)
-
-        if not text.strip():
-            st.error("Could not extract text from this PDF. It may be scanned or image-based.")
-            st.stop()
-
-        word_count = len(text.split())
-        st.write(f"Extracted **{word_count:,} words** from the document.")
-
-        st.write("**Step 2/4** - Identifying verifiable claims with AI...")
-        try:
-            claims = extract_claims(text, OPENROUTER_KEY)
-        except Exception as exc:
-            st.error(f"Error extracting claims: {str(exc)}")
-            st.toast("Request timed out or failed!", icon="🚨")
-            status.update(label="Process failed.", state="error")
-            st.stop()
-
-        st.write(f"Found **{len(claims)} verifiable claims**.")
-
-        if not claims:
-            st.warning("No verifiable claims found in this document.")
-            st.stop()
-
-        st.write("**Step 3-4/4** - Searching evidence and generating verdicts...")
-
-        max_claims_to_check = min(len(claims), 10)
-        if len(claims) > 10:
-            st.info(f"To respect API limits, checking the first {max_claims_to_check} claims.")
-
-        results = []
-        progress_bar = st.progress(0)
-        progress_text = st.empty()
-
-        for index, claim in enumerate(claims[:max_claims_to_check]):
-            claim_text = claim.get("claim", str(claim))
-            progress_text.write(f"⏳ Verifying claim {index + 1}/{max_claims_to_check}...")
-            
-            evidence = search_claim(claim_text, TAVILY_KEY)
-            verdict = get_verdict(claim_text, evidence, client)
-            
-            if verdict.get("verdict") == "ERROR":
-                st.toast(f"Claim {index + 1} timed out or failed.", icon="⚠️")
-
-            results.append(
-                {
-                    "claim": claim_text,
-                    "type": claim.get("type", "unknown"),
-                    **verdict,
-                }
+        with file_info_col:
+            st.markdown(
+                html_block(f"""
+                <div class="uploaded-file">
+                    <div class="file-row">
+                        <span class="file-icon">{SVG_CHECK}</span>
+                        <span class="uploaded-filename">{uploaded_name}</span>
+                    </div>
+                    <span class="uploaded-size">{uploaded_size} KB</span>
+                </div>
+                """),
+                unsafe_allow_html=True,
             )
 
-            progress_bar.progress((index + 1) / max_claims_to_check)
-            time.sleep(0.3)
+        with remove_col:
+            remove_pdf = st.button("×", key="remove_pdf", help="Remove PDF", use_container_width=True)
 
-        progress_text.empty()
-        status.update(label="Fact-check complete.", state="complete", expanded=False)
+        if remove_pdf:
+            reset_upload_state()
+            st.rerun()
 
-    # Alert the user that processing is complete
-    st.toast("Fact-check complete! Your report is ready.", icon="✅")
-    st.balloons()
-
-    verified_count = sum(1 for result in results if result.get("verdict") == "VERIFIED")
-    inaccurate_count = sum(1 for result in results if result.get("verdict") == "INACCURATE")
-    false_count = sum(1 for result in results if result.get("verdict") == "FALSE")
-    error_count = sum(1 for result in results if result.get("verdict") == "ERROR")
+        st.markdown('<div class="action-row"></div>', unsafe_allow_html=True)
+        run_check = st.button("Run fact-check", type="primary", use_container_width=True)
+    else:
+        if st.session_state.active_file_name is not None:
+            st.session_state.stage = "Upload"
+            st.session_state.results = []
+            st.session_state.word_count = 0
+            st.session_state.claim_count = 0
+            st.session_state.active_file_name = None
+            st.session_state.active_file_size = 0
+        run_check = False
 
     st.markdown(
         html_block(f"""
-        <div class="stats-container">
-            <div class="stat-card stat-total">
-                <div class="stat-number">{len(results)}</div>
-                <div class="stat-label">Total claims</div>
+        <div class="meta-grid">
+            <div class="mini-stat">
+                <strong>{st.session_state.word_count:,}</strong>
+                <span>Words</span>
             </div>
-            <div class="stat-card stat-verified">
-                <div class="stat-number">{verified_count}</div>
-                <div class="stat-label">Verified</div>
-            </div>
-            <div class="stat-card stat-inaccurate">
-                <div class="stat-number">{inaccurate_count}</div>
-                <div class="stat-label">Inaccurate</div>
-            </div>
-            <div class="stat-card stat-false">
-                <div class="stat-number">{false_count}</div>
-                <div class="stat-label">False</div>
-            </div>
-            <div class="stat-card stat-error">
-                <div class="stat-number">{error_count}</div>
-                <div class="stat-label">Errors</div>
+            <div class="mini-stat">
+                <strong>{st.session_state.claim_count}</strong>
+                <span>Claims</span>
             </div>
         </div>
-        <div class="custom-divider"></div>
         """),
         unsafe_allow_html=True,
     )
 
-    st.markdown(html_block('<h2 class="section-heading">Detailed Results</h2>'), unsafe_allow_html=True)
+with right_col:
+    stage_placeholder = st.empty()
+    set_stage(st.session_state.stage, stage_placeholder)
+    status_placeholder = st.empty()
 
-    filter_col1, filter_col2 = st.columns([3, 1])
-    with filter_col2:
-        verdict_filter = st.selectbox(
-            "Filter by verdict",
-            ["All", "VERIFIED", "INACCURATE", "FALSE", "ERROR"],
-            label_visibility="collapsed",
+    if uploaded and run_check:
+        try:
+            OPENROUTER_KEY = st.secrets["OPENROUTER_API_KEY"]
+            TAVILY_KEY = st.secrets["TAVILY_API_KEY"]
+        except Exception:
+            st.session_state.results = []
+            status_placeholder.error("API keys missing. Add OpenRouter and Tavily keys in Streamlit secrets.")
+        else:
+            client = OpenAI(
+                base_url="https://openrouter.ai/api/v1",
+                api_key=OPENROUTER_KEY,
+                timeout=15.0,
+            )
+
+            st.session_state.results = []
+            st.session_state.word_count = 0
+            st.session_state.claim_count = 0
+
+            set_stage("Extracting", stage_placeholder)
+            status_placeholder.markdown(
+                '<div class="run-status">Extracting text from the PDF...</div>',
+                unsafe_allow_html=True,
+            )
+            text = extract_text(uploaded)
+
+            if not text.strip():
+                set_stage("Upload", stage_placeholder)
+                status_placeholder.error("Could not read text from this PDF. It may be scanned or image-based.")
+            else:
+                st.session_state.word_count = len(text.split())
+
+                set_stage("Finding claims", stage_placeholder)
+                status_placeholder.markdown(
+                    '<div class="run-status">Finding verifiable claims...</div>',
+                    unsafe_allow_html=True,
+                )
+                try:
+                    claims = extract_claims(text, OPENROUTER_KEY)
+                except Exception as exc:
+                    status_placeholder.error(f"Claim extraction failed: {str(exc)}")
+                else:
+                    st.session_state.claim_count = len(claims)
+
+                    if not claims:
+                        set_stage("Upload", stage_placeholder)
+                        status_placeholder.warning("No verifiable claims found in this PDF.")
+                    else:
+                        max_claims_to_check = min(len(claims), 10)
+                        results = []
+
+                        set_stage("Checking evidence", stage_placeholder)
+                        progress_bar = st.progress(0)
+                        progress_text = st.empty()
+
+                        for index, claim in enumerate(claims[:max_claims_to_check]):
+                            claim_text = claim.get("claim", str(claim))
+                            progress_text.markdown(
+                                f'<div class="run-status">Checking claim {index + 1} of {max_claims_to_check}</div>',
+                                unsafe_allow_html=True,
+                            )
+
+                            evidence = search_claim(claim_text, TAVILY_KEY)
+                            verdict = get_verdict(claim_text, evidence, client)
+
+                            results.append(
+                                {
+                                    "claim": claim_text,
+                                    "type": claim.get("type", "unknown"),
+                                    **verdict,
+                                }
+                            )
+
+                            progress_bar.progress((index + 1) / max_claims_to_check)
+                            time.sleep(0.2)
+
+                        progress_text.empty()
+                        progress_bar.empty()
+                        st.session_state.results = results
+                        set_stage("Report ready", stage_placeholder)
+                        status_placeholder.markdown(
+                            '<div class="run-status">Report ready.</div>',
+                            unsafe_allow_html=True,
+                        )
+
+    results = st.session_state.results
+
+    if results:
+        st.markdown('<div class="result-panel"><div class="panel-label">Results</div>', unsafe_allow_html=True)
+        st.markdown(render_stats(results), unsafe_allow_html=True)
+
+        filter_col, download_col = st.columns([0.58, 0.42], gap="small")
+        with filter_col:
+            verdict_filter = st.selectbox(
+                "Filter by verdict",
+                ["All", "VERIFIED", "INACCURATE", "FALSE", "ERROR"],
+                label_visibility="collapsed",
+            )
+
+        df = pd.DataFrame(results)
+        display_cols = ["claim", "type", "verdict", "confidence", "explanation", "correct_fact"]
+        available_cols = [column for column in display_cols if column in df.columns]
+        df_export = df[available_cols]
+
+        with download_col:
+            st.download_button(
+                "Download CSV",
+                df_export.to_csv(index=False),
+                file_name="factcheck_report.csv",
+                mime="text/csv",
+                use_container_width=True,
+            )
+
+        filtered_results = (
+            results
+            if verdict_filter == "All"
+            else [result for result in results if result.get("verdict") == verdict_filter]
         )
 
-    filtered_results = (
-        results
-        if verdict_filter == "All"
-        else [result for result in results if result.get("verdict") == verdict_filter]
-    )
+        for index, result in enumerate(filtered_results):
+            verdict = result.get("verdict", "ERROR").upper()
+            confidence = escape(str(result.get("confidence", "LOW")))
+            card_class, badge_class = verdict_classes(verdict)
+            claim_type = escape(str(result.get("type", "unknown")))
+            claim_text = escape(str(result.get("claim", "N/A")))
+            explanation = escape(str(result.get("explanation", "No explanation available.")))
+            correction_html = render_correction(result.get("correct_fact"))
+            sources_html = render_sources(result.get("sources"))
 
-    for index, result in enumerate(filtered_results):
-        verdict = result.get("verdict", "ERROR").upper()
-        confidence = escape(str(result.get("confidence", "LOW")))
-        card_class, badge_class = verdict_classes(verdict)
-        claim_type = escape(str(result.get("type", "unknown")))
-        claim_text = escape(str(result.get("claim", "N/A")))
-        explanation = escape(str(result.get("explanation", "No explanation available.")))
-        correction_html = render_correction(result.get("correct_fact"))
-        sources_html = render_sources(result.get("sources"))
-
-        st.markdown(
-            html_block(f"""
-            <div class="verdict-card {card_class}">
-                <div class="verdict-header">
-                    <span class="verdict-badge {badge_class}">{verdict_icon(verdict)} {escape(verdict)}</span>
-                    <span class="confidence-badge">Confidence: {confidence}</span>
-                    <span class="claim-meta">#{index + 1} - {claim_type}</span>
+            st.markdown(
+                html_block(f"""
+                <div class="verdict-card {card_class}">
+                    <div class="verdict-header">
+                        <span class="verdict-badge {badge_class}">{verdict_icon(verdict)} {escape(verdict)}</span>
+                        <span class="confidence-badge">{confidence}</span>
+                        <span class="claim-meta">#{index + 1} - {claim_type}</span>
+                    </div>
+                    <div class="claim-text">{claim_text}</div>
+                    <div class="explanation-text">{explanation}</div>
+                    {correction_html}
+                    {sources_html}
                 </div>
-                <div class="claim-text">"{claim_text}"</div>
-                <div class="explanation-text">{explanation}</div>
-                {correction_html}
-                {sources_html}
+                """),
+                unsafe_allow_html=True,
+            )
+
+        st.markdown("</div>", unsafe_allow_html=True)
+    elif uploaded:
+        st.markdown(
+            html_block("""
+            <div class="empty-panel">
+                <div class="empty-title">Ready to check</div>
+                <p class="empty-copy">Run the fact-check to extract claims and generate verdicts here.</p>
             </div>
             """),
             unsafe_allow_html=True,
         )
-
-    st.markdown('<div class="custom-divider"></div>', unsafe_allow_html=True)
-
-    df = pd.DataFrame(results)
-    display_cols = ["claim", "type", "verdict", "confidence", "explanation", "correct_fact"]
-    available_cols = [column for column in display_cols if column in df.columns]
-    df_export = df[available_cols]
-
-    col_dl1, col_dl2, col_dl3 = st.columns([1, 2, 1])
-    with col_dl2:
-        st.download_button(
-            "Download full report (CSV)",
-            df_export.to_csv(index=False),
-            file_name="factcheck_report.csv",
-            mime="text/csv",
-            use_container_width=True,
+    else:
+        st.markdown(
+            html_block("""
+            <div class="empty-panel">
+                <div class="empty-title">Upload a PDF to begin</div>
+                <p class="empty-copy">Results, progress, and the final CSV report will appear on this side.</p>
+            </div>
+            """),
+            unsafe_allow_html=True,
         )
-
-st.markdown(
-    html_block("""
-<div class="footer-note">
-    <div>Built with Streamlit, OpenRouter AI, and Tavily Search.</div>
-    <div>Fact-Check Agent - AI-powered claim verification.</div>
-</div>
-"""),
-    unsafe_allow_html=True,
-)
