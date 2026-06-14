@@ -130,6 +130,4 @@ factcheck-agent/
 
 ---
 
-## License
 
-MIT License — built for the GEO Product Management Assessment.
