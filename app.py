@@ -18,7 +18,7 @@ from modules.pdf_extractor import extract_text
 from modules.verdict_engine import get_verdict
 from modules.web_verifier import search_claim
 
-APP_VERSION = "0.0.1"
+APP_VERSION = "0.0.2"
 
 def html_block(markup: str) -> str:
     return "\n".join(line.strip() for line in dedent(markup).strip().splitlines())
