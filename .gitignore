@@ -1,0 +1,20 @@
+# Dependencies
+venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# Secrets — NEVER commit
+.streamlit/secrets.toml
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temp files
+read_pdf.py
+*.log
