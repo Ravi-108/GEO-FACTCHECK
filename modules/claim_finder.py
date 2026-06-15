@@ -9,14 +9,15 @@ import json
 import re
 import time
 
-# Verified free models on OpenRouter — tried in order until one works
+# Currently available free models on OpenRouter (June 2026) — tried in order
 FALLBACK_MODELS = [
+    "google/gemma-4-31b-it:free",
+    "google/gemma-4-26b-a4b-it:free",
     "meta-llama/llama-3.3-70b-instruct:free",
-    "google/gemini-2.0-flash-lite-preview-02-05:free",
-    "mistralai/mistral-7b-instruct:free"
+    "qwen/qwen3-coder:free",
 ]
 
-MAX_RETRIES = 2  # Per model
+MAX_RETRIES = 3  # Per model
 
 
 def extract_claims(text: str, api_key: str) -> list[dict]:
@@ -34,7 +35,7 @@ def extract_claims(text: str, api_key: str) -> list[dict]:
     client = OpenAI(
         base_url="https://openrouter.ai/api/v1",
         api_key=api_key,
-        timeout=15.0,
+        timeout=60.0,
         default_headers={
             "HTTP-Referer": "https://github.com/Ravi-108/GEO-FACTCHECK",
             "X-Title": "GEO Fact-Check Agent",
@@ -73,7 +74,7 @@ TEXT TO ANALYZE:
     for model_name in FALLBACK_MODELS:
         for attempt in range(MAX_RETRIES):
             try:
-                print(f"Trying model: {model_name} (Attempt {attempt+1})")
+                print(f"[ClaimFinder] Trying model: {model_name} (Attempt {attempt+1})")
                 response = client.chat.completions.create(
                     model=model_name,
                     messages=[{"role": "user", "content": prompt}],
@@ -81,7 +82,12 @@ TEXT TO ANALYZE:
                     temperature=0.1,
                 )
                 
+                if not response.choices or not response.choices[0].message or not response.choices[0].message.content:
+                    print(f"[ClaimFinder] Empty response from {model_name}, trying next...")
+                    break  # Try next model
+                
                 raw = response.choices[0].message.content
+                print(f"[ClaimFinder] Got response from {model_name}, length={len(raw)}")
                 
                 # Try to extract JSON from the response (handle markdown code blocks)
                 json_match = re.search(r'\[.*\]', raw, re.DOTALL)
@@ -91,9 +97,11 @@ TEXT TO ANALYZE:
                 return json.loads(raw)
             
             except Exception as e:
+                error_str = str(e)
+                print(f"[ClaimFinder] Error with {model_name} (attempt {attempt+1}): {error_str[:200]}")
+                
                 if first_error is None:
                     first_error = e
-                error_str = str(e)
                 
                 # Check for hard account limits (do not retry or fallback)
                 if "free-models-per-day" in error_str or "credits" in error_str.lower():
@@ -105,8 +113,10 @@ TEXT TO ANALYZE:
                     continue
                 # If model not found (404), skip to next model immediately
                 elif "404" in error_str or "endpoints" in error_str.lower():
+                    print(f"[ClaimFinder] Model {model_name} not found, trying next...")
                     break
                 else:
+                    print(f"[ClaimFinder] Unexpected error, trying next model...")
                     break  # Other error, try next model
     
     # All models failed

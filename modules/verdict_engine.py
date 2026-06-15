@@ -9,14 +9,15 @@ import json
 import re
 import time
 
-# Verified free models on OpenRouter — tried in order until one works
+# Currently available free models on OpenRouter (June 2026) — tried in order
 FALLBACK_MODELS = [
+    "google/gemma-4-31b-it:free",
+    "google/gemma-4-26b-a4b-it:free",
     "meta-llama/llama-3.3-70b-instruct:free",
-    "google/gemini-2.0-flash-lite-preview-02-05:free",
-    "mistralai/mistral-7b-instruct:free"
+    "qwen/qwen3-coder:free",
 ]
 
-MAX_RETRIES = 2  # Per model
+MAX_RETRIES = 3  # Per model
 
 
 def get_verdict(claim: str, evidence: list[dict], client: OpenAI) -> dict:
@@ -64,7 +65,7 @@ Return ONLY valid JSON with no markdown formatting, no code blocks, no additiona
     for model_name in FALLBACK_MODELS:
         for attempt in range(MAX_RETRIES):
             try:
-                print(f"Verdict Engine: Trying model {model_name} (Attempt {attempt+1})")
+                print(f"[VerdictEngine] Trying model {model_name} (Attempt {attempt+1})")
                 response = client.chat.completions.create(
                     model=model_name,
                     messages=[{"role": "user", "content": prompt}],
@@ -72,7 +73,12 @@ Return ONLY valid JSON with no markdown formatting, no code blocks, no additiona
                     temperature=0.1,
                 )
                 
+                if not response.choices or not response.choices[0].message or not response.choices[0].message.content:
+                    print(f"[VerdictEngine] Empty response from {model_name}, trying next...")
+                    break  # Try next model
+                
                 raw = response.choices[0].message.content
+                print(f"[VerdictEngine] Got response from {model_name}, length={len(raw)}")
                 
                 # Try to extract JSON from the response
                 json_match = re.search(r'\{.*\}', raw, re.DOTALL)
@@ -85,13 +91,14 @@ Return ONLY valid JSON with no markdown formatting, no code blocks, no additiona
                 return result
             
             except Exception as e:
+                error_str = str(e)
+                print(f"[VerdictEngine] Error with {model_name} (attempt {attempt+1}): {error_str[:200]}")
+                
                 if first_error is None:
                     first_error = e
-                error_str = str(e)
                 
                 # Check for hard account limits (do not retry or fallback)
                 if "free-models-per-day" in error_str or "credits" in error_str.lower():
-                    import re
                     match = re.search(r"'message':\s*'([^']+)'", error_str)
                     clean_msg = match.group(1) if match else error_str
                     return {
@@ -108,13 +115,14 @@ Return ONLY valid JSON with no markdown formatting, no code blocks, no additiona
                     continue
                 # If model not found (404), skip to next model immediately
                 elif "404" in error_str or "endpoints" in error_str.lower():
+                    print(f"[VerdictEngine] Model {model_name} not found, trying next...")
                     break
                 else:
+                    print(f"[VerdictEngine] Unexpected error, trying next model...")
                     break  # Other error, try next model
     
     # All models failed
     error_msg = str(first_error)
-    import re
     match = re.search(r"'message':\s*'([^']+)'", error_msg)
     clean_msg = match.group(1) if match else error_msg
     

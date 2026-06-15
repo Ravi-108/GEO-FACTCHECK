@@ -1317,7 +1317,7 @@ with right_col:
             client = OpenAI(
                 base_url="https://openrouter.ai/api/v1",
                 api_key=OPENROUTER_KEY,
-                timeout=15.0,
+                timeout=60.0,
                 default_headers={
                     "HTTP-Referer": "https://github.com/Ravi-108/GEO-FACTCHECK",
                     "X-Title": "GEO Fact-Check Agent",
